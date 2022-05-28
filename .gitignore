@@ -134,3 +134,4 @@ dump/
 summary/
 offline_game/
 *.exe
+.idea
