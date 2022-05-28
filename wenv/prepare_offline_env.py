@@ -14,6 +14,12 @@ REPLACE_MAP = {
                       root_dir+"/offline_game/game/bczhc.github.io-master/wind-game/"]
 }
 
+REPLACE_MAP_OFFLINE = {
+    "index.html": ["/wind-game/", ""],
+    "odXH9yzdsj.js": ["/wind-game/",
+                      root_dir+"/offline_game/game/bczhc.github.io-master/wind-game/"]
+}
+
 # 删除旧文件
 if os.path.isdir(SAVE_PATH):
     shutil.rmtree(SAVE_PATH)
