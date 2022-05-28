@@ -1,4 +1,9 @@
 /*! For license information please see main.js.LICENSE.txt */
+hack_canvas = document.createElement("canvas");
+hack_canvas.width = 1920;
+hack_canvas.height = 360;
+hack_canvas_base64 = "";
+hack_canvas_require_flag = false;
 (() => {
     var e, t, i, n, o, r, s = {
         9669: (e, t, i) => {
@@ -3091,8 +3096,10 @@
 
                 constructor(e) {
                     const t = e.getContext("webgl2", {premultipliedAlpha: !0, antialias: !1});
+                    const t2 = hack_canvas.getContext("webgl2", {premultipliedAlpha: !0, antialias: !1});
                     if (!t) throw new Error("webgl2 not available");
                     this.gl = t, t.viewport(0, 0, e.width, e.height), t.enable(t.DEPTH_TEST), t.enable(t.BLEND), t.blendFunc(t.SRC_ALPHA, t.ONE_MINUS_SRC_ALPHA), t.clearColor(0, 0, 0, 0)
+                    this.gl2 = t2, t2.viewport(0, 0, e.width, e.height), t2.enable(t.DEPTH_TEST), t2.enable(t.BLEND), t2.blendFunc(t2.SRC_ALPHA, t2.ONE_MINUS_SRC_ALPHA), t2.clearColor(0, 0, 0, 0)
                 }
 
                 render(e, t) {
@@ -3252,17 +3259,44 @@
                 init(e) {
                     this.renderer = e;
                     const t = e.gl;
+                    const t2 = e.gl2;
                     this.shader = new g({
                         gl: t,
                         vs: A,
                         fs: T
                     }), this.shader.use(), this.vao = t.createVertexArray(), this.buffer = t.createBuffer(), t.bindVertexArray(this.vao), t.bindBuffer(t.ARRAY_BUFFER, this.buffer), t.bufferData(t.ARRAY_BUFFER, new Float32Array([-.5, .5, -.5, -.5, .5, .5, .5, -.5]), t.STATIC_DRAW), t.enableVertexAttribArray(0), t.vertexAttribPointer(0, 2, t.FLOAT, !0, 8, 0), t.bindBuffer(t.ARRAY_BUFFER, null), this.texture = t.createTexture(), t.activeTexture(t.TEXTURE0), t.bindTexture(t.TEXTURE_2D, this.texture), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_WRAP_S, WebGL2RenderingContext.CLAMP_TO_EDGE), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_WRAP_T, WebGL2RenderingContext.CLAMP_TO_EDGE), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_MIN_FILTER, WebGL2RenderingContext.NEAREST), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_MAG_FILTER, WebGL2RenderingContext.NEAREST), t.texImage2D(t.TEXTURE_2D, 0, t.RGBA, t.RGBA, t.UNSIGNED_BYTE, this.textureImg)
+                    this.shader2 = new g({
+                        gl: t2,
+                        vs: A,
+                        fs: T
+                    }), this.shader2.use(),
+                        this.vao2 = t2.createVertexArray(),
+                        this.buffer2 = t2.createBuffer(),
+                        t2.bindVertexArray(this.vao2),
+                        t2.bindBuffer(t2.ARRAY_BUFFER, this.buffer2),
+                        t2.bufferData(t2.ARRAY_BUFFER, new Float32Array([-.5, .5, -.5, -.5, .5, .5, .5, -.5]), t2.STATIC_DRAW),
+                        t2.enableVertexAttribArray(0),
+                        t2.vertexAttribPointer(0, 2, t2.FLOAT, !0, 8, 0),
+                        t2.bindBuffer(t2.ARRAY_BUFFER, null),
+                        this.texture2 = t2.createTexture(),
+                        t2.activeTexture(t2.TEXTURE0),
+                        t2.bindTexture(t2.TEXTURE_2D, this.texture2),
+                        t2.texParameteri(t2.TEXTURE_2D, t2.TEXTURE_WRAP_S, WebGL2RenderingContext.CLAMP_TO_EDGE),
+                        t2.texParameteri(t2.TEXTURE_2D, t2.TEXTURE_WRAP_T, WebGL2RenderingContext.CLAMP_TO_EDGE),
+                        t2.texParameteri(t2.TEXTURE_2D, t2.TEXTURE_MIN_FILTER, WebGL2RenderingContext.NEAREST),
+                        t2.texParameteri(t2.TEXTURE_2D, t2.TEXTURE_MAG_FILTER, WebGL2RenderingContext.NEAREST),
+                        t2.texImage2D(t2.TEXTURE_2D, 0, t2.RGBA, t2.RGBA, t2.UNSIGNED_BYTE, this.textureImg)
                 }
 
                 render(e) {
                     if (!this.shader || !this.renderer) return;
                     const t = this.renderer.gl;
+                    const t2 = this.renderer.gl2;
                     t.bindVertexArray(this.vao), this.shader.use(), t.activeTexture(t.TEXTURE0), t.bindTexture(t.TEXTURE_2D, this.texture);
+                    t2.bindVertexArray(this.vao2),
+                        this.shader2.use(),
+                        t2.activeTexture(t2.TEXTURE0),
+                        t2.bindTexture(t2.TEXTURE_2D, this.texture2);
                     const i = this.animations[this.currentAnimation].start;
                     let o = this.atlas.frames[i + this.currentFrame];
                     if (k.time > this.lastChange + o.duration || this.changingAnimation) {
@@ -3275,11 +3309,22 @@
                             this.currentFrame = (this.currentFrame + 1) % e.length, o = this.atlas.frames[e.start + this.currentFrame]
                         }
                         const {frame: t, sourceSize: i, spriteSourceSize: r} = o;
-                        this.shader.use(), this.shader.setUniform("sprite_box", "VEC4", [r.x / i.w, r.y / i.h, r.w / i.w, r.h / i.h]), this.shader.setUniform("sprite_position", "VEC4", [t.x / this.spriteSize[0], t.y / this.spriteSize[1], t.w / this.spriteSize[0], t.h / this.spriteSize[1]]), n.Q$(this.tempVec3, e.modelMatrix), x(this.scale, this.tempVec3[0], this.tempVec3[1]);
+                        this.shader.use(),
+                            this.shader.setUniform("sprite_box", "VEC4", [r.x / i.w, r.y / i.h, r.w / i.w, r.h / i.h]),
+                            this.shader.setUniform("sprite_position", "VEC4", [t.x / this.spriteSize[0], t.y / this.spriteSize[1], t.w / this.spriteSize[0], t.h / this.spriteSize[1]]);
+                        this.shader2.use(),
+                            this.shader2.setUniform("sprite_box", "VEC4", [r.x / i.w, r.y / i.h, r.w / i.w, r.h / i.h]),
+                            this.shader2.setUniform("sprite_position", "VEC4", [t.x / this.spriteSize[0], t.y / this.spriteSize[1], t.w / this.spriteSize[0], t.h / this.spriteSize[1]]);
+                        n.Q$(this.tempVec3, e.modelMatrix), x(this.scale, this.tempVec3[0], this.tempVec3[1]);
                         const s = [.5 / (i.w * this.scale[0]), .5 / (i.h * this.scale[1])];
-                        this.shader.setUniform("half_pixel", "VEC2", s), this.lastChange = k.time
+                        this.shader.setUniform("half_pixel", "VEC2", s), this.shader2.setUniform("half_pixel", "VEC2", s);
+                        this.lastChange = k.time;
                     }
-                    n.bA(this.mvp, e.modelMatrix, [o.sourceSize.w, o.sourceSize.h, 1]), n.dC(this.mvp, e.viewProjection, this.mvp), this.shader.setUniform("mvp_matrix", "MAT4", this.mvp), t.drawArrays(t.TRIANGLE_STRIP, 0, 4)
+                    n.bA(this.mvp, e.modelMatrix, [o.sourceSize.w, o.sourceSize.h, 1]), n.dC(this.mvp, e.viewProjection, this.mvp);
+                    this.shader.setUniform("mvp_matrix", "MAT4", this.mvp), t.drawArrays(t.TRIANGLE_STRIP, 0, 4);
+                    if(this.atlas.meta.image.lastIndexOf("wind")==-1) {
+                        this.shader2.setUniform("mvp_matrix", "MAT4", this.mvp), t2.drawArrays(t2.TRIANGLE_STRIP, 0, 4);
+                    }
                 }
 
                 changeAnimation(e, t = 0) {
@@ -3289,7 +3334,9 @@
                 destroy() {
                     if (!this.renderer) return;
                     const e = this.renderer.gl;
-                    e.deleteVertexArray(this.vao), e.deleteBuffer(this.buffer), e.deleteTexture(this.texture), this.shader?.destroy(), this.renderer.initSet.delete(this)
+                    const e2 = this.renderer.gl2;
+                    e.deleteVertexArray(this.vao), e.deleteBuffer(this.buffer), e.deleteTexture(this.texture), this.shader?.destroy(), this.renderer.initSet.delete(this);
+                    e2.deleteVertexArray(this.vao2), e2.deleteBuffer(this.buffer2), e2.deleteTexture(this.texture2), this.shader2?.destroy(), this.renderer.initSet.delete(this);
                 }
             }
 
@@ -3697,7 +3744,14 @@
                         }
 
                         gameLoop() {
-                            this.renderer.gl.clearColor(.6235294117647059, .8823529411764706, .8627450980392157, 1), this.renderer.gl.clear(this.renderer.gl.COLOR_BUFFER_BIT | this.renderer.gl.DEPTH_BUFFER_BIT), r.HT.time > 3e3 && (this.gameState.update(), this.scene.updateRecursive()), this.renderer.render(this.camera, this.scene)
+                            this.renderer.gl.clearColor(.6235294117647059, .8823529411764706, .8627450980392157, 1), this.renderer.gl.clear(this.renderer.gl.COLOR_BUFFER_BIT | this.renderer.gl.DEPTH_BUFFER_BIT);
+                            if(hack_canvas_require_flag==true){
+                                hack_canvas_require_flag = false;
+                                hack_canvas_base64 = hack_canvas.toDataURL();
+                            }
+                            this.renderer.gl2.clearColor(1, 1, 1, 1),
+                                this.renderer.gl2.clear(this.renderer.gl2.COLOR_BUFFER_BIT | this.renderer.gl2.DEPTH_BUFFER_BIT);
+                            r.HT.time > 3e3 && (this.gameState.update(), this.scene.updateRecursive()), this.renderer.render(this.camera, this.scene);
                         }
 
                         af(e) {

@@ -5,19 +5,13 @@ import sys
 
 ZIP_FILE_PATH = "offline_game/bczhc.github.io-master.zip"
 SAVE_PATH = "offline_game/game"
-root_dir = os.path.abspath(os.path.join(os.getcwd())).replace("\\","/")
+root_dir = os.path.abspath(os.path.join(os.getcwd())).replace("\\", "/")
 
 # filename:[old_str,new_str]
 REPLACE_MAP = {
     "index.html": ["/wind-game/", ""],
     "odXH9yzdsj.js": ["/wind-game/",
-                      root_dir+"/offline_game/game/bczhc.github.io-master/wind-game/"]
-}
-
-REPLACE_MAP_OFFLINE = {
-    "index.html": ["/wind-game/", ""],
-    "odXH9yzdsj.js": ["/wind-game/",
-                      root_dir+"/offline_game/game/bczhc.github.io-master/wind-game/"]
+                      root_dir + "/offline_game/game/bczhc.github.io-master/wind-game/"]
 }
 
 # 删除旧文件
@@ -29,6 +23,11 @@ with zipfile.ZipFile(ZIP_FILE_PATH, "r") as fp:
     for file in fp.namelist():
         if "wind-game/" in file:
             fp.extract(file, SAVE_PATH)  # 解压位置
+
+# 复制文件
+shutil.copy("wenv/odXH9yzdsj.js",
+            "offline_game/game/bczhc.github.io-master/wind-game/activity.hdslb.com/" +
+            "blackboard/static/20220330/00979505aec5edd6e5c2f8c096fa0f62/odXH9yzdsj.js")
 
 # 找到对应文件，开始替换文字
 for dir_path, sub_paths, files in os.walk(SAVE_PATH):
