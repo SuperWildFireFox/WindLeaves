@@ -1,6 +1,9 @@
 import os
 
 from selenium import webdriver
+from util.net import get_chromedriver
+
+get_chromedriver()
 
 root_dir = os.path.abspath(os.path.join(os.getcwd())).replace("\\", "/")
 chop = webdriver.ChromeOptions()
