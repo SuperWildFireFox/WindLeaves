@@ -14,3 +14,9 @@
 python wenv/prepare_offline_env.py
 ```
 
+如果想自己玩一下，可以输入：
+
+```
+ python wenv/test_play_offline_by_human.py
+```
+
