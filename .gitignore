@@ -135,3 +135,5 @@ summary/
 offline_game/
 *.exe
 .idea
+
+tfox_*
