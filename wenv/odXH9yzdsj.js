@@ -6,6 +6,7 @@ hack_canvas.height = 360;
 hack_canvas_base64 = "";
 hack_canvas_require_flag = false;
 hack_scoreboard = [];
+hack_game_area = [];
 (() => {
     var e, t, i, n, o, r, s = {
         9669: (e, t, i) => {
@@ -3793,6 +3794,7 @@ hack_scoreboard = [];
             const o = {r1: "", r2: ""}, r = e => {
                 const t = document.createElement("div");
                 t.className = "banner-game";
+                hack_game_area.push(t);
                 const i = e.clientWidth / (16 / 3);
                 Object.assign(t.style, {
                     width: "100%",

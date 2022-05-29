@@ -1,4 +1,5 @@
 import os
+import random
 import time
 
 import cv2
@@ -7,11 +8,16 @@ from selenium import webdriver
 
 from util.net import get_chromedriver
 from util.image import convert_bs64_to_array
+from wenv.hack_code import get_keydown_js, get_keyup_js
 
 ACTIONS = [
     ['noop'],
     ['right'],
+    ['right', 'up'],
+    ['right', 'catch'],
     ['left'],
+    ['left', 'up'],
+    ['left', 'catch'],
     ['up'],
     ['catch'],
 ]
@@ -127,7 +133,7 @@ class Game:
     ACTION_RANDOM = "action_random"
     ACTION_PPO = "action_ppo"
 
-    def __init__(self, mode=OFFLINE, action=ACTION_RANDOM, layout_pos=[0, 0], pipe=None):
+    def __init__(self, mode=OFFLINE, action=ACTION_RANDOM, layout_pos=[0, 0]):
         if mode in [Game.OFFLINE, Game.ONLINE]:
             self.mode = mode
         else:
@@ -137,17 +143,16 @@ class Game:
         else:
             raise NotImplemented
         self.layout_pos = layout_pos
-        if self.action == Game.ACTION_PPO:
-            assert pipe is not None
-            self.inner_pipe, self.outer_pipe = pipe
 
         # 核心参数
-        self.fps_r = 1 / 12
+        # fps仅供参考，实际fps会比设定值小，大约小一倍
+        self.fps_r = 1 / 24
 
         # 全局对象
         self.driver = None
         self.game_state = None
         self.image_data = None
+        self.pre_step_terminal = False
 
     # 初始化离线环境
     def init_offline_env(self):
@@ -158,14 +163,19 @@ class Game:
         self.driver.get(game_dir)
         time.sleep(1)
         # self.control_pause_game()
-        while True:
-            self.game_state = self.info_get_game_state()
-            if self.game_state.game_state == "EndPage":
-                self.reset_offline_env()
-            time.sleep(self.fps_r)
+        self.game_state = self.info_get_game_state()
+        self.image_data = self.info_get_game_image(self.game_state)
+        self.control_pause_game()
+        # while True:
+        #     self.game_state = self.info_get_game_state()
+        #     if self.game_state.game_state == "EndPage":
+        #         self.reset_offline_env()
+        #     else:
+        #         time.sleep(self.fps_r)
 
     # 重置离线版游戏环境
     def reset_offline_env(self):
+        self.pre_step_terminal = False
         self.control_reset_game()
         time.sleep(0.1)
         self.game_state = self.info_get_game_state()
@@ -184,6 +194,40 @@ class Game:
         # 设置离线游戏窗口位置
         self.driver.set_window_size(width=OFFLINE_CHROME_WIDTH, height=OFFLINE_CHROME_HEIGHT)
         self.driver.set_window_position(*self.layout_pos)
+
+    # 通过调用该函数操控游戏
+    # action为单一数值，0开始
+    def step(self, action):
+        if self.pre_step_terminal:
+            self.reset_offline_env()
+        self.control_resume_game()
+        action_chars = []
+        for act in ACTIONS[action]:
+            action_chars.append(ACTION_KET_MAP[act])
+        js1 = ""
+        js2 = ""
+        if action_chars[0] is not None:
+            for c in action_chars:
+                js1 += get_keydown_js(c)
+                js2 += get_keyup_js(c)
+            self.tool_execute_script(js1)
+        time.sleep(self.fps_r)
+        if action_chars[0] is not None:
+            self.tool_execute_script(js2)
+        self.game_state = self.info_get_game_state()
+        self.image_data = self.info_get_game_image(self.game_state)
+        if self.game_state.game_state == "EndPage":
+            self.pre_step_terminal = True
+        self.control_pause_game()
+        return self.game_state, self.image_data
+
+    # 一个娱乐的，随机操控的策略
+    def random_move(self):
+        assert self.action == Game.ACTION_RANDOM
+        actions_num = [i for i in range(len(ACTIONS))]
+        while True:
+            action = random.choice(actions_num)
+            self.step(action)
 
     # 工具函数，对driver执行js（因为可能会涉及到锁所以单独拎出来）
     def tool_execute_script(self, js, obj=None):
