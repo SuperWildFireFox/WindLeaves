@@ -1,10 +1,12 @@
 import os
 import time
 
+import cv2
+import numpy as np
 from selenium import webdriver
 
 from util.net import get_chromedriver
-from util.image import cal_view_range
+from util.image import convert_bs64_to_array
 
 ACTIONS = [
     ['noop'],
@@ -106,11 +108,17 @@ class GameState:
             raise Exception("Unknown game_state {}".format(game_state))
         self.leaves_array = leaves_array
         self.leaves_obj = []
-        view_range = cal_view_range((self.posx, self.posy), PLAYER_VIEW_SHAPE, PLAYER_VIEW_SPLIT)
+        view_range = self.get_view_range()
         for leaf in leaves_array:
             leaf_obj = GameState.Leaves(leaf[0], leaf[1], leaf[2], leaf[3])
             if leaf_obj.is_visible(view_range):
                 self.leaves_obj.append(leaf)
+
+    # 根据视窗大小与左右视窗比例计算画面裁剪范围
+    def get_view_range(self):
+        left_length = PLAYER_VIEW_SHAPE[0] * PLAYER_VIEW_SPLIT[0] / (PLAYER_VIEW_SPLIT[0] + PLAYER_VIEW_SPLIT[1])
+        right_length = PLAYER_VIEW_SHAPE[0] - left_length
+        return [self.posx - left_length, self.posx + right_length]
 
 
 class Game:
@@ -133,8 +141,13 @@ class Game:
             assert pipe is not None
             self.inner_pipe, self.outer_pipe = pipe
 
+        # 核心参数
+        self.fps_r = 1 / 12
+
         # 全局对象
         self.driver = None
+        self.game_state = None
+        self.image_data = None
 
     # 初始化离线环境
     def init_offline_env(self):
@@ -143,11 +156,17 @@ class Game:
         root_dir = os.path.abspath(os.path.join(os.getcwd())).replace("\\", "/")
         game_dir = "file:///{}/offline_game/game/bczhc.github.io-master/wind-game/index.html".format(root_dir)
         self.driver.get(game_dir)
-        time.sleep(5)
+        time.sleep(1)
+        # self.control_pause_game()
         while True:
-            tt = time.time()
-            self.info_get_game_state()
-            print("0", time.time() - tt)
+            self.game_state = self.info_get_game_state()
+            self.info_get_game_image(self.game_state)
+            time.sleep(self.fps_r)
+
+    def reset_env(self):
+        self.control_reset_game()
+        time.sleep(0.1)
+        self.game_state = self.info_get_game_state()
 
     # 初始化离线driver
     def init_offline_driver(self):
@@ -177,6 +196,11 @@ class Game:
     # 恢复游戏
     def control_resume_game(self):
         js = "gameInst.resume();"
+        self.tool_execute_script(js)
+
+    # 重启游戏
+    def control_reset_game(self):
+        js = "gameInst.reset();"
         self.tool_execute_script(js)
 
     # 获取游戏全局信息
@@ -215,3 +239,28 @@ class Game:
                                leaves_array=states[12],
                                )
         return game_state
+
+    def info_get_game_image(self, game_state):
+        # 获取图像
+        js1 = "hack_canvas_require_flag = true"
+        js2 = "return hack_canvas_base64"
+        self.driver.execute_script(js1)
+        time.sleep(1 / 30)
+        bs64 = self.driver.execute_script(js2)
+        img = convert_bs64_to_array(bs64)
+        # 裁剪图像
+        view_range = self.game_state.get_view_range()
+        pad_size = -1
+        if view_range[0] < -GAME_ORIGIN_SIZE[0] / 2:
+            pad_size = -GAME_ORIGIN_SIZE[0] / 2 - view_range[0]
+            view_range[0] = -GAME_ORIGIN_SIZE[0] / 2
+        view_range[0] = int(view_range[0] + GAME_ORIGIN_SIZE[0] / 2)
+        view_range[1] = int(view_range[1] + GAME_ORIGIN_SIZE[0] / 2)
+        img = img[:, view_range[0]:view_range[1]]
+        pad_size = int(pad_size)
+        if pad_size != -1:
+            pad_data = np.zeros((img.shape[0], pad_size, img.shape[2]), np.uint8)
+            img = np.concatenate((pad_data,img), 1)
+        # 360,1080,3
+        cv2.imshow("test", img)
+        cv2.waitKey(1)

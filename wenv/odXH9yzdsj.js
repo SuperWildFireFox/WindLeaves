@@ -3324,10 +3324,9 @@ hack_scoreboard = [];
                     }
                     n.bA(this.mvp, e.modelMatrix, [o.sourceSize.w, o.sourceSize.h, 1]), n.dC(this.mvp, e.viewProjection, this.mvp);
                     this.shader.setUniform("mvp_matrix", "MAT4", this.mvp), t.drawArrays(t.TRIANGLE_STRIP, 0, 4);
-                    if(this.atlas.meta.image.lastIndexOf("wind")==-1 || this.atlas.meta.image.lastIndexOf("brid")==-1) {
+                    if(this.atlas.meta.image.lastIndexOf("wind")==-1&&this.atlas.meta.image.lastIndexOf("brid")==-1) {
                         this.shader2.setUniform("mvp_matrix", "MAT4", this.mvp), t2.drawArrays(t2.TRIANGLE_STRIP, 0, 4);
                     }
-                    console.log(this.atlas.meta.image);
                 }
 
                 changeAnimation(e, t = 0) {
