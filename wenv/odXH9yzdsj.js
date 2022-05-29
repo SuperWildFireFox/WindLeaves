@@ -5,6 +5,7 @@ hack_canvas.width = 1920;
 hack_canvas.height = 360;
 hack_canvas_base64 = "";
 hack_canvas_require_flag = false;
+hack_scoreboard = [];
 (() => {
     var e, t, i, n, o, r, s = {
         9669: (e, t, i) => {
@@ -3940,7 +3941,6 @@ hack_canvas_require_flag = false;
                 baseSpeed = -.06;
                 bonusSpeed = 0;
                 translateSpeed = 0;
-
                 get score() {
                     return this._score
                 }
@@ -4019,6 +4019,7 @@ hack_canvas_require_flag = false;
                     return !1
                 }
             })();
+            hack_scoreboard.push(c);
             Object.keys(u).forEach((e => {
                 d[e] = {src: r ? e : h ? u[e] + "@1c.webp" : u[e], type: "image"}
             })), Object.keys(p).forEach((e => {
@@ -4646,7 +4647,8 @@ hack_canvas_require_flag = false;
                 constructor() {
                     super(), this.normalNode = new n.BV, this.trapNode = new n.BV, this.luckyNode = new n.BV;
                     const [e, t] = [m.map((e => r.am.get(e.t))), m.map((e => r.am.get(e.a)))], [i, o] = [g.map((e => r.am.get(e.t))), g.map((e => r.am.get(e.a)))], [s, a] = [y.map((e => r.am.get(e.t))), y.map((e => r.am.get(e.a)))];
-                    this.normalImgs = e, this.normalAtlas = t, this.trapTexture = i, this.trapAtlas = o, this.luckyTexture = s, this.luckyAtlas = a, this.addChild(this.normalNode), this.addChild(this.trapNode), this.addChild(this.luckyNode)
+                    this.normalImgs = e, this.normalAtlas = t, this.trapTexture = i, this.trapAtlas = o, this.luckyTexture = s, this.luckyAtlas = a, this.addChild(this.normalNode), this.addChild(this.trapNode), this.addChild(this.luckyNode);
+                    this.hack_all_array = [];
                 }
 
                 addInitial() {
@@ -4737,8 +4739,12 @@ hack_canvas_require_flag = false;
                     for (; this.normalNode.children[0]?.position[0] < -1e3;) this.normalNode.children.shift()?.destroy();
                     for (; this.trapNode.children[0]?.position[0] < -1e3;) this.trapNode.children.shift()?.destroy();
                     for (; this.luckyNode.children[0]?.position[0] < -1e3;) this.luckyNode.children.shift()?.destroy();
+                    this.hack_all_array = [];
                     this.lastNodePosition[0] < 1100 && this.addNext(), this.normalNode.children.concat(this.trapNode.children).forEach(((e, t) => {
-                        s.Body.translate(e.leafBody, {x: 0, y: .5 * Math.sin(n.HT.time / 400 + 1.23 * t)})
+                        const y_sp = .5 * Math.sin(n.HT.time / 400 + 1.23 * t);
+                        s.Body.translate(e.leafBody, {x: 0, y: y_sp});
+                        const t_array = [e.leafBody.label, e._position[0],e._position[1], y_sp];
+                        this.hack_all_array.push(t_array);
                     })), this.all.forEach(((e, t) => {
                         s.Body.translate(e.leafBody, {x: n.HT.deltaT * r.XH.translateSpeed, y: 0})
                     }))
@@ -4747,6 +4753,7 @@ hack_canvas_require_flag = false;
                 get all() {
                     return this.normalNode.children.concat(this.trapNode.children).concat(this.luckyNode.children)
                 }
+
 
                 get traps() {
                     return this.trapNode.children
