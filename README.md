@@ -20,3 +20,25 @@ python wenv/prepare_offline_env.py
  python test_play_offline_by_human.py
 ```
 
+
+
+## 在线AI
+
+（如果B站首页小游戏还是风叶穿行的话）
+
+首次运行请在控制台输入如下指令生成证书文件：
+
+```
+mitmproxy
+```
+
+转到 C:\Users\你的用户名\\.mitmproxy 文件夹，双击mitmproxy-ca-cert.p12，全部选择默认选项，安装证书。
+
+之后，请在仓库根目录下打开控制台，输入指令：
+
+```
+mitmdump -s httpproxy.py -p 9090
+```
+
+
+

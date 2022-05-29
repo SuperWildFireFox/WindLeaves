@@ -1,4 +1,5 @@
 /*! For license information please see main.js.LICENSE.txt */
+console.log("hack success")
 hack_canvas = document.createElement("canvas");
 hack_canvas.width = 1920;
 hack_canvas.height = 360;
@@ -3490,6 +3491,7 @@ hack_canvas_require_flag = false;
 
                         async init() {
                             await s.am.load();
+                            window.gameInst=this;
                             const e = new p.J, t = new u.O, i = new f.D;
                             this.player = e, this.shamrocks = t, this.winds = i, this.birds = new m.g, this.countDown = new y.W, this.scene.addChild(new d.A), this.scene.addChild(this.birds), this.scene.addChild(t), this.scene.addChild(this.countDown), this.scene.addChild(e), this.scene.addChild(new h.o), this.scene.addChild(i), this.player = e, this.domElements.restartEl.onclick = () => {
                                 this.lastActive = performance.now(), (0, v.SZ)({
