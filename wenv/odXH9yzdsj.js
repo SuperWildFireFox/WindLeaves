@@ -3689,7 +3689,7 @@ hack_scoreboard = [];
                             })), this.gameState.addCondition("InGame", "EndPage", (() => {
                                 const t = e.position;
                                 return t[0] < -980 || t[1] < -220
-                            })), this.renderer.render(this.camera, this.scene), this.banner.children.length > 2 ? this.banner.insertBefore(this.gameContainer, this.banner.lastElementChild) : this.banner.append(this.gameContainer), this.listeners.blur = () => this.pause(), this.listeners.focus = () => this.resume(), this.listeners.visibilitychange = () => {
+                            })), this.renderer.render(this.camera, this.scene), this.banner.children.length > 2 ? this.banner.insertBefore(this.gameContainer, this.banner.lastElementChild) : this.banner.append(this.gameContainer), this.listeners.visibilitychange = () => {
                                 "hidden" === document.visibilityState ? this.pause() : "visible" === document.visibilityState && this.resume()
                             }, this.listeners.resize = () => {
                                 const e = this.banner.clientWidth / (16 / 3);

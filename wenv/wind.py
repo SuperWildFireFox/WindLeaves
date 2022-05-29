@@ -160,13 +160,18 @@ class Game:
         # self.control_pause_game()
         while True:
             self.game_state = self.info_get_game_state()
-            self.info_get_game_image(self.game_state)
+            if self.game_state.game_state == "EndPage":
+                self.reset_offline_env()
             time.sleep(self.fps_r)
 
-    def reset_env(self):
+    # 重置离线版游戏环境
+    def reset_offline_env(self):
         self.control_reset_game()
         time.sleep(0.1)
         self.game_state = self.info_get_game_state()
+        assert self.game_state.game_state == "InGame"
+        self.image_data = self.info_get_game_image(self.game_state)
+        self.control_pause_game()
 
     # 初始化离线driver
     def init_offline_driver(self):
@@ -200,7 +205,7 @@ class Game:
 
     # 重启游戏
     def control_reset_game(self):
-        js = "gameInst.reset();"
+        js = "gameInst.start();"
         self.tool_execute_script(js)
 
     # 获取游戏全局信息
@@ -240,7 +245,7 @@ class Game:
                                )
         return game_state
 
-    def info_get_game_image(self, game_state):
+    def info_get_game_image(self, game_state, show_image=False):
         # 获取图像
         js1 = "hack_canvas_require_flag = true"
         js2 = "return hack_canvas_base64"
@@ -260,7 +265,9 @@ class Game:
         pad_size = int(pad_size)
         if pad_size != -1:
             pad_data = np.zeros((img.shape[0], pad_size, img.shape[2]), np.uint8)
-            img = np.concatenate((pad_data,img), 1)
-        # 360,1080,3
-        cv2.imshow("test", img)
-        cv2.waitKey(1)
+            img = np.concatenate((pad_data, img), 1)
+        if show_image:
+            # 360,1080,3
+            cv2.imshow("test", img)
+            cv2.waitKey(1)
+        return img
