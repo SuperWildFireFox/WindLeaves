@@ -3409,7 +3409,7 @@ hack_scoreboard = [];
                 }
 
                 render(e) {
-                    if (k.time < 3e3) return;
+                    if (k.time < 0e3) return;
                     this.increaseFloat += this.options.particleBirthRate / 60;
                     const t = Math.floor(this.increaseFloat) - this.increaseTemp;
                     t > 0 && (this.increaseFloat -= t, this.increaseTemp = 0), this.bornParticles = Math.min(this.options.numParticles, this.bornParticles + t), this.bornParticles > 0 && (this.updatePass?.(), this.displayPass?.(e))
@@ -3557,7 +3557,7 @@ hack_scoreboard = [];
                                     }), 50), setTimeout((() => {
                                         this.scene.children.pop()?.destroy(), this.lockInput = !1
                                     }), 550)
-                                }), 1e3)
+                                }), 0e3)
                             })), this.gameState.addHook("EndPage", "leave", (() => {
                                 this.domElements.endCover.style.display = "none", this.domElements.endCover.style.opacity = "0"
                             })), this.gameState.addHook("InGame", "enter", (() => {
@@ -3583,7 +3583,7 @@ hack_scoreboard = [];
                                     t.leafDisableLock || (e.body.velocity.y < .5 && e.body.position.y - e.size.h / 2 > i.position.y + 8 ? i.collisionFilter.mask = 5 | i.collisionFilter.mask : i.collisionFilter.mask = ~(5 | ~i.collisionFilter.mask))
                                 })), o.Composite.translate(s.YB.engine.world, {x: -.18 * r.HT.deltaT, y: 0})
                             })), this.keyboardInput.onKeyDown((i => {
-                                if (r.HT.time < 3e3) return;
+                                if (r.HT.time < 0e3) return;
                                 const n = () => {
                                     ({
                                         Ground: () => {
@@ -3754,7 +3754,7 @@ hack_scoreboard = [];
                             }
                             this.renderer.gl2.clearColor(1, 1, 1, 1),
                                 this.renderer.gl2.clear(this.renderer.gl2.COLOR_BUFFER_BIT | this.renderer.gl2.DEPTH_BUFFER_BIT);
-                            r.HT.time > 3e3 && (this.gameState.update(), this.scene.updateRecursive()), this.renderer.render(this.camera, this.scene);
+                            r.HT.time > 0e3 && (this.gameState.update(), this.scene.updateRecursive()), this.renderer.render(this.camera, this.scene);
                         }
 
                         af(e) {
@@ -3805,7 +3805,7 @@ hack_scoreboard = [];
                     letterSpacing: "1px",
                     textRendering: "geometricPrecision"
                 });
-                const r = t.attachShadow({mode: "closed"}), s = document.createElement("style");
+                const r = t.attachShadow({mode: "open"}), s = document.createElement("style");
                 s.textContent = `\n    canvas {\n      width: 100%;\n      height: ${i}px;\n      position: absolute;\n      top: 0;\n      left: 0;\n      cursor: 'default';\n    }\n    .full {\n      position: absolute;\n      width: 100%;\n      height: 100%;\n      top: 0;\n      left: 0;\n      image-rendering: pixelated;\n    }\n    .content-bubble {\n      position: absolute;\n      width: 650px;\n      height: 314px;\n      top: 24px;\n      left: 634px;\n      background: url(${n.fF ? "/guide/bubble.png" : "/wind-game/i0.hdslb.com/bfs/activity-plat/static/20220309/00979505aec5edd6e5c2f8c096fa0f62/fqC498nGEQ.png"});\n    }\n    .option-bubble {\n      width: 220px;\n      height: 80px;\n      background: url(${n.fF ? "/guide/bubble_option.png" : "/wind-game/i0.hdslb.com/bfs/activity-plat/static/20220309/00979505aec5edd6e5c2f8c096fa0f62/x0KtnfZvTq.png"});\n      cursor: pointer;\n      text-align: center;\n      font-size: 24px;\n      line-height: 24px;\n      color: rgb(89, 164, 87);\n      box-sizing: border-box;\n      padding-top: 28px;\n      padding-right: 28px;\n      transition: 0.3s\n    }\n    .option-bubble:hover {\n      transform: translateY(-5px);\n    }\n    .end-content-left {\n      position: absolute;\n      width: 220px;\n      height: 160px;\n      top: 80px;\n      left: 70px;\n      display: flex;\n      flex-direction: column;\n      justify-content: center;\n      box-sizing: border-box;\n      padding-left: 20px;\n    }\n    .end-content-right {\n      position: absolute;\n      width: 220px;\n      height: 160px;\n      top: 80px;\n      left: 310px;\n      font-size: 24px;\n      color: rgb(116, 167, 166);\n      display: flex;\n      flex-direction: column;\n      justify-content: center;\n    }\n    .end-content-right span {\n      color: #a4d341;\n      letter-spacing: -3px;\n      margin-right: 3px;\n    }\n    .end-option-icon {\n      position: absolute;\n      width: 36px;\n      height: 36px;\n      top: 20px;\n      left: 160px;\n      background-size: 100%;\n      background-repeat: no-repeat;\n      background-position: center;\n    }\n\n    .score {\n      position: absolute;\n      color: #fff;\n      top: 48px;\n      right: 24px;\n      text-shadow: 3px 3px #000;\n      display: flex;\n      align-items: center;\n      justify-content: flex-end;\n      width: 240px;\n      height: 32px;\n      transform: scale(1.5);\n      transform-origin: right;\n    }\n    .number {\n      width: 24px;\n      height: 32px;\n      background-image: url(/wind-game/i0.hdslb.com/bfs/activity-plat/static/20220316/00979505aec5edd6e5c2f8c096fa0f62/ZP51pxsKWj.png);\n      background-repeat: no-repeat;\n      background-size: 240px 32px;\n      image-rendering: pixelated;\n    }\n  `, r.appendChild(s);
                 const a = document.createElement("canvas");
                 a.width = 1920, a.height = 360, r.appendChild(a);
@@ -4155,7 +4155,7 @@ hack_scoreboard = [];
                 }
 
                 update() {
-                    this.object && n.HT.time > 4e3 ? this.object = void 0 : this.object && this.translate([n.HT.deltaT * (o.XH.translateSpeed - .18) / 2, 0, 0])
+                    this.object && n.HT.time > 0e3 ? this.object = void 0 : this.object && this.translate([n.HT.deltaT * (o.XH.translateSpeed - .18) / 2, 0, 0])
                 }
             }
         }, 7199: (e, t, i) => {
