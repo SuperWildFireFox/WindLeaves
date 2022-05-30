@@ -42,6 +42,7 @@ DOWNSAMPLE_SCALE = 4
 
 class GameState:
     CurrentStates = ["Air", "Climb", "Ground"]
+    PositionStates = ["LeftTorch", "Mid", "RightTorch"]
     StemTypes = ["stem", "stem_trap", "stem_lucky", "stem_lucky_end"]
     GroundTypes = ["leaf", "leaf_trap", "leaf_lucky", "leaf_lucky_end"]
     GameStates = ['MainMenu', 'InGame', 'Paused', 'EndPage']
@@ -63,7 +64,8 @@ class GameState:
             self.velocity_y = velocity_y
 
         def is_visible(self, view_range):
-            return view_range[0] < self.position_x < view_range[1]
+            return view_range[0] < self.position_x < view_range[
+                1] and -GAME_ORIGIN_SIZE[0] / 2 < self.position_x < GAME_ORIGIN_SIZE[0] / 2
 
     def __init__(self,
                  current_state,
@@ -115,6 +117,16 @@ class GameState:
         self.leaves_array = leaves_array
         self.leaves_obj = []
         view_range = self.get_view_range()
+        self.pad_size = 0
+        if view_range[0] < -GAME_ORIGIN_SIZE[0] / 2:
+            self.position_state = "LeftTorch"
+            self.pad_size = abs(view_range[0] - (-GAME_ORIGIN_SIZE[0] / 2))
+        elif view_range[1] > GAME_ORIGIN_SIZE[0] / 2:
+            self.position_state = "RightTorch"
+            self.pad_size = abs(view_range[1] - (GAME_ORIGIN_SIZE[0] / 2))
+        else:
+            self.position_state = "Mid"
+        self.pad_size = int(self.pad_size)
         for leaf in leaves_array:
             leaf_obj = GameState.Leaves(leaf[0], leaf[1], leaf[2], leaf[3])
             if leaf_obj.is_visible(view_range):
@@ -161,17 +173,18 @@ class Game:
         root_dir = os.path.abspath(os.path.join(os.getcwd())).replace("\\", "/")
         game_dir = "file:///{}/offline_game/game/bczhc.github.io-master/wind-game/index.html".format(root_dir)
         self.driver.get(game_dir)
-        time.sleep(1)
+        time.sleep(0.5)
         # self.control_pause_game()
         self.game_state = self.info_get_game_state()
         self.image_data = self.info_get_game_image(self.game_state)
-        self.control_pause_game()
-        # while True:
-        #     self.game_state = self.info_get_game_state()
-        #     if self.game_state.game_state == "EndPage":
-        #         self.reset_offline_env()
-        #     else:
-        #         time.sleep(self.fps_r)
+        # self.control_pause_game()
+        while True:
+            self.game_state = self.info_get_game_state()
+            self.info_get_game_image(self.game_state)
+            if self.game_state.game_state == "EndPage":
+                self.reset_offline_env()
+            else:
+                time.sleep(self.fps_r)
 
     # 重置离线版游戏环境
     def reset_offline_env(self):
@@ -181,7 +194,7 @@ class Game:
         self.game_state = self.info_get_game_state()
         assert self.game_state.game_state == "InGame"
         self.image_data = self.info_get_game_image(self.game_state)
-        self.control_pause_game()
+        # self.control_pause_game()
 
     # 初始化离线driver
     def init_offline_driver(self):
@@ -289,7 +302,7 @@ class Game:
                                )
         return game_state
 
-    def info_get_game_image(self, game_state, show_image=False):
+    def info_get_game_image(self, game_state, show_image=True):
         # 获取图像
         js1 = "hack_canvas_require_flag = true"
         js2 = "return hack_canvas_base64"
@@ -299,17 +312,19 @@ class Game:
         img = convert_bs64_to_array(bs64)
         # 裁剪图像
         view_range = self.game_state.get_view_range()
-        pad_size = -1
-        if view_range[0] < -GAME_ORIGIN_SIZE[0] / 2:
-            pad_size = -GAME_ORIGIN_SIZE[0] / 2 - view_range[0]
+        if game_state.position_state == "LeftTorch":
             view_range[0] = -GAME_ORIGIN_SIZE[0] / 2
+        elif game_state.position_state == "RightTorch":
+            view_range[1] = GAME_ORIGIN_SIZE[0] / 2
         view_range[0] = int(view_range[0] + GAME_ORIGIN_SIZE[0] / 2)
         view_range[1] = int(view_range[1] + GAME_ORIGIN_SIZE[0] / 2)
         img = img[:, view_range[0]:view_range[1]]
-        pad_size = int(pad_size)
-        if pad_size != -1:
-            pad_data = np.zeros((img.shape[0], pad_size, img.shape[2]), np.uint8)
+        if game_state.position_state == "LeftTorch":
+            pad_data = np.zeros((img.shape[0], game_state.pad_size, img.shape[2]), np.uint8)
             img = np.concatenate((pad_data, img), 1)
+        elif game_state.position_state == "RightTorch":
+            pad_data = np.zeros((img.shape[0], game_state.pad_size, img.shape[2]), np.uint8)
+            img = np.concatenate((img, pad_data), 1)
         if show_image:
             # 360,1080,3
             cv2.imshow("test", img)
