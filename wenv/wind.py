@@ -174,17 +174,16 @@ class Game:
         game_dir = "file:///{}/offline_game/game/bczhc.github.io-master/wind-game/index.html".format(root_dir)
         self.driver.get(game_dir)
         time.sleep(0.5)
-        # self.control_pause_game()
         self.game_state = self.info_get_game_state()
         self.image_data = self.info_get_game_image(self.game_state)
-        # self.control_pause_game()
-        while True:
-            self.game_state = self.info_get_game_state()
-            self.info_get_game_image(self.game_state)
-            if self.game_state.game_state == "EndPage":
-                self.reset_offline_env()
-            else:
-                time.sleep(self.fps_r)
+        self.control_pause_game()
+        # while True:
+        #     self.game_state = self.info_get_game_state()
+        #     self.info_get_game_image(self.game_state)
+        #     if self.game_state.game_state == "EndPage":
+        #         self.reset_offline_env()
+        #     else:
+        #         time.sleep(self.fps_r)
 
     # 重置离线版游戏环境
     def reset_offline_env(self):
@@ -194,7 +193,7 @@ class Game:
         self.game_state = self.info_get_game_state()
         assert self.game_state.game_state == "InGame"
         self.image_data = self.info_get_game_image(self.game_state)
-        # self.control_pause_game()
+        self.control_pause_game()
 
     # 初始化离线driver
     def init_offline_driver(self):
@@ -302,7 +301,7 @@ class Game:
                                )
         return game_state
 
-    def info_get_game_image(self, game_state, show_image=True):
+    def info_get_game_image(self, game_state, show_image=False):
         # 获取图像
         js1 = "hack_canvas_require_flag = true"
         js2 = "return hack_canvas_base64"
