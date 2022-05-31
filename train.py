@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import random
 import shutil
@@ -12,10 +13,11 @@ from tensorboardX import SummaryWriter
 from torch.distributions import Categorical
 
 from model import Actor, Critic
+from test import GameTest
 from util.data import generate_feature1, generate_feature2, compute_gae
 from util.image import NormalizeImage
 from wenv.control import EnvironmentControl
-from wenv.wind import ACTIONS, GameState, GAME_ORIGIN_SIZE, DOWNSAMPLE_SCALE, PLAYER_VIEW_SHAPE
+from wenv.wind import ACTIONS, GameState, GAME_ORIGIN_SIZE, DOWNSAMPLE_SCALE, PLAYER_VIEW_SHAPE, Game
 
 # 调试变量
 DELETE_WEIGHT = True
@@ -46,23 +48,6 @@ def get_args():
     parser.add_argument('--epsilon', type=float, default=0.2)
     parser.add_argument('--beta', type=float, default=0.01, help='计算actor loss时熵的系数')
     parser.add_argument('--mode_save_episode', type=int, default=100, help="训练模型保存间隔")
-
-    # parser.add_argument("--stage", type=int, default=1)epsilon
-    # parser.add_argument("--action_type", type=str, default="simple")
-    # parser.add_argument('--lr', type=float, default=1e-4)
-    # parser.add_argument('--gamma', type=float, default=0.9, help='discount factor for rewards')
-    # parser.add_argument('--tau', type=float, default=1.0, help='parameter for GAE')
-    # parser.add_argument('--beta', type=float, default=0.01, help='entropy coefficient')
-    # parser.add_argument('--epsilon', type=float, default=0.2, help='parameter for Clipped Surrogate Objective')
-    # parser.add_argument('--batch_size', type=int, default=16)
-    # parser.add_argument('--num_epochs', type=int, default=10)
-    # parser.add_argument("--num_local_steps", type=int, default=128)
-    # parser.add_argument("--num_global_steps", type=int, default=5e6)
-    # parser.add_argument("--num_processes", type=int, default=8)
-    # parser.add_argument("--save_interval", type=int, default=50, help="Number of steps between savings")
-    # parser.add_argument("--max_actions", type=int, default=200, help="Maximum repetition steps in test phase")
-    # parser.add_argument("--log_path", type=str, default="tensorboard/ppo_super_mario_bros")
-    # parser.add_argument("--saved_path", type=str, default="trained_models")
     args = parser.parse_args()
     return args
 
@@ -95,6 +80,10 @@ def train(args):
     feature1_length = 2 + 2 + len(GameState.CurrentStates) + len(GameState.PositionStates) + len(
         GameState.GroundTypes) + len(GameState.StemTypes) + len(GameState.BaseSpeeds)  # 21
     feature2_length = 2 + 1 + len(GameState.Leaves.LeafTypes)  # 6
+    with open("{}/model_input_shape.json".format(args.weight_path), 'w') as fp:
+        model_input_shape = {"NUM_ACTION": NUM_ACTION, "IMAGE_SIZE": IMAGE_PROCESS_SIZE,
+                             "feature1_length": feature1_length, "feature2_length": feature2_length}
+        fp.write(json.dumps(model_input_shape))
     actor = Actor(NUM_ACTION, IMAGE_PROCESS_SIZE, feature1_length, feature2_length).to(device)
     actor_optimizer = torch.optim.Adam(actor.parameters(), lr=args.lr)
     critic = Critic(IMAGE_PROCESS_SIZE, feature1_length, feature2_length).to(device)
@@ -106,13 +95,7 @@ def train(args):
         critic.load_state_dict(torch.load(WEIGHT_PATH_CRITIC, map_location=torch.device(device)))
 
     # 初始化测试环境
-    # p_test = PPOTest(STEP_FRAME_NUM,
-    #                  action_type,
-    #                  num_actions,
-    #                  writer_path=summary_path,
-    #                  test_num=5,
-    #                  log_path="test_monitor.txt")
-    # p_test.start_test_mp()
+    game_test = GameTest(Game.OFFLINE, training=True, args=args)
 
     # 获得初始特征
     curr_image = []
@@ -258,14 +241,11 @@ def train(args):
         if curr_episode % args.mode_save_episode == 0:
             torch.save(actor.state_dict(), "{}/actor_episode_{}.pth".format(args.weight_path, curr_episode))
             torch.save(critic.state_dict(), "{}/critic_episode_{}.pth".format(args.weight_path, curr_episode))
-            # if TEST and curr_episode and curr_episode % TEST_STEP == 0:
-            #     state_dict = actor.state_dict()
-            #     for k, v in state_dict.items():
-            #         state_dict[k] = v.cpu()
-            #     p_test.outer_channel.send((curr_episode,
-            #                                state_dict,
-            #                                normalization.running_ms.mean,
-            #                                normalization.running_ms.std))
+        if curr_episode and curr_episode % args.test_step == 0:
+            state_dict = actor.state_dict()
+            for k, v in state_dict.items():
+                state_dict[k] = v.cpu()
+            game_test.outer_channel.send((curr_episode, state_dict))
         writer.close()
 
 
