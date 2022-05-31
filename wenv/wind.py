@@ -7,19 +7,19 @@ import numpy as np
 from selenium import webdriver
 
 from util.net import get_chromedriver
-from util.image import convert_bs64_to_array
+from util.image import convert_bs64_to_array, NormalizeImage
 from wenv.hack_code import get_keydown_js, get_keyup_js
 
 ACTIONS = [
-    ['noop'],
-    ['right'],
-    ['right', 'up'],
-    ['right', 'catch'],
-    ['left'],
-    ['left', 'up'],
-    ['left', 'catch'],
-    ['up'],
-    ['catch'],
+    ['noop'],  # 0
+    ['right'],  # 1
+    ['right', 'up'],  # 2
+    ['right', 'catch'],  # 3
+    ['left'],  # 4
+    ['left', 'up'],  # 5
+    ['left', 'catch'],  # 6
+    ['up'],  # 7
+    ['catch'],  # 8
 ]
 
 ACTION_KET_MAP = {"noop": None,
@@ -46,9 +46,10 @@ class GameState:
     StemTypes = ["stem", "stem_trap", "stem_lucky", "stem_lucky_end"]
     GroundTypes = ["leaf", "leaf_trap", "leaf_lucky", "leaf_lucky_end"]
     GameStates = ['MainMenu', 'InGame', 'Paused', 'EndPage']
-    PlayerPositionXRange = [-980, 980]  # 非强制性指标
-    PlayerPositionYRange = [-220, 220]
+    PlayerPositionXRange = [-960, 960]  # 非强制性指标
+    PlayerPositionYRange = [-180, 180]
     PlayerVelocityXRange = [-3, 5.5]
+    PlayerVelocityYRange = [-10, 10]
     BaseSpeeds = [-0.06, -0.09, -0.12]
 
     class Leaves:
@@ -62,10 +63,31 @@ class GameState:
                 raise Exception("Unknown leaf_type {}".format(leaf_type))
             self.position_x, self.position_y = position_x, position_y
             self.velocity_y = velocity_y
+            self.distance_x = self.distance_y = -1
 
         def is_visible(self, view_range):
             return view_range[0] < self.position_x < view_range[
                 1] and -GAME_ORIGIN_SIZE[0] / 2 < self.position_x < GAME_ORIGIN_SIZE[0] / 2
+
+        def cal_distance(self, player_posx, player_posy):
+            self.distance_x = self.position_x - player_posx
+            self.distance_y = self.position_y - player_posy
+
+        @property
+        def leaf_type_idx(self):
+            return GameState.Leaves.LeafTypes.index(self.leaf_type)
+
+        @property
+        def distance_x_normalized(self):
+            return (self.distance_x - 270) / 540
+
+        @property
+        def distance_y_normalized(self):
+            return self.distance_y / 360
+
+        @property
+        def velocity_y_normalized(self):
+            return self.velocity_y / 0.5
 
     def __init__(self,
                  current_state,
@@ -107,7 +129,7 @@ class GameState:
         self.velocity_x, self.velocity_y = velocity_x, velocity_y
         self.score = score
         if base_speed in GameState.BaseSpeeds:
-            self.base_speed_idx = GameState.BaseSpeeds.index(base_speed)
+            self.base_speed = base_speed
         else:
             raise Exception("Unknown base_speed {}".format(base_speed))
         if game_state in GameState.GameStates:
@@ -130,13 +152,61 @@ class GameState:
         for leaf in leaves_array:
             leaf_obj = GameState.Leaves(leaf[0], leaf[1], leaf[2], leaf[3])
             if leaf_obj.is_visible(view_range):
-                self.leaves_obj.append(leaf)
+                leaf_obj.cal_distance(self.posx, self.posy)
+                self.leaves_obj.append(leaf_obj)
 
     # 根据视窗大小与左右视窗比例计算画面裁剪范围
     def get_view_range(self):
         left_length = PLAYER_VIEW_SHAPE[0] * PLAYER_VIEW_SPLIT[0] / (PLAYER_VIEW_SPLIT[0] + PLAYER_VIEW_SPLIT[1])
         right_length = PLAYER_VIEW_SHAPE[0] - left_length
         return [self.posx - left_length, self.posx + right_length]
+
+    # 屏蔽无效动作
+    def get_action_mask(self):
+        base_mask = np.ones(len(ACTIONS), dtype=int)
+        if self.current_state == "Air":
+            base_mask[2] = base_mask[5] = base_mask[7] = 0
+        elif self.current_state == "Climb":
+            base_mask[1] = base_mask[3] = base_mask[4] = base_mask[6] = base_mask[8] = 0
+        elif self.current_state == "Ground":
+            base_mask[3] = base_mask[6] = base_mask[8] = 0
+        return base_mask
+
+    @property
+    def posx_normalized(self):
+        return self.posx / 960
+
+    @property
+    def posy_normalized(self):
+        return self.posy / 180
+
+    @property
+    def velocity_x_normalized(self):
+        return (self.velocity_x - 1) / 4
+
+    @property
+    def velocity_y_normalized(self):
+        return self.velocity_y / 10
+
+    @property
+    def current_state_idx(self):
+        return GameState.CurrentStates.index(self.current_state)
+
+    @property
+    def position_state_idx(self):
+        return GameState.PositionStates.index(self.position_state)
+
+    @property
+    def stem_type_idx(self):
+        return GameState.StemTypes.index(self.stem_type) if self.stem_id else None
+
+    @property
+    def ground_type_idx(self):
+        return GameState.GroundTypes.index(self.ground_type) if self.ground_id else None
+
+    @property
+    def base_speed_idx(self):
+        return GameState.BaseSpeeds.index(self.base_speed)
 
 
 class Game:
@@ -165,6 +235,7 @@ class Game:
         self.game_state = None
         self.image_data = None
         self.pre_step_terminal = False
+        self.pre_score = 0
 
     # 初始化离线环境
     def init_offline_env(self):
@@ -188,6 +259,7 @@ class Game:
     # 重置离线版游戏环境
     def reset_offline_env(self):
         self.pre_step_terminal = False
+        self.pre_score = 0
         self.control_reset_game()
         time.sleep(0.1)
         self.game_state = self.info_get_game_state()
@@ -206,6 +278,17 @@ class Game:
         # 设置离线游戏窗口位置
         self.driver.set_window_size(width=OFFLINE_CHROME_WIDTH, height=OFFLINE_CHROME_HEIGHT)
         self.driver.set_window_position(*self.layout_pos)
+
+    def get_reward(self, game_state):
+        if game_state.game_state == 'EndPage':
+            reward = -15
+        else:
+            if game_state.score > self.pre_score:
+                self.pre_score = game_state.score
+                reward = 1
+            else:
+                reward = 0
+        return reward
 
     # 通过调用该函数操控游戏
     # action为单一数值，0开始
@@ -228,10 +311,11 @@ class Game:
             self.tool_execute_script(js2)
         self.game_state = self.info_get_game_state()
         self.image_data = self.info_get_game_image(self.game_state)
+        reward = self.get_reward(self.game_state)
         if self.game_state.game_state == "EndPage":
             self.pre_step_terminal = True
         self.control_pause_game()
-        return self.game_state, self.image_data
+        return self.image_data, self.game_state, reward
 
     # 一个娱乐的，随机操控的策略
     def random_move(self):

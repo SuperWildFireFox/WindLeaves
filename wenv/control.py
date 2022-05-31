@@ -3,7 +3,6 @@ import time
 from screeninfo import get_monitors
 from wenv.wind import Game, OFFLINE_CHROME_WIDTH, OFFLINE_CHROME_HEIGHT
 import multiprocessing as mp
-from multiprocessing import Lock as mpLock
 
 
 class LayoutManager:
@@ -82,8 +81,8 @@ class EnvironmentControl:
         game.init_offline_env()
         while True:
             action = self.env_conns[idx].recv()
-            game_state, image_data = game.step(action)
-            self.env_conns[idx].send([game_state, image_data])
+            image, game_state, reward = game.step(action)
+            self.env_conns[idx].send([image, game_state, reward])
 
 
 if __name__ == '__main__':

@@ -3,3 +3,5 @@ chromedriver_autoinstaller
 opencv-python~=4.5.5.64
 numpy~=1.21.6
 screeninfo~=0.8
+torch~=1.7.1+cu110
+tensorboardX~=2.5

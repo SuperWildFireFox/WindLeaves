@@ -25,10 +25,10 @@ i = 0
 while True:
     # 约0.03-0.04s
     driver.execute_script(js2)
-    time.sleep(1/61)
+    time.sleep(1 / 61)
     bs64 = driver.execute_script(js1)
     i += 1
     if bs64:
         img = convert_bs64_to_array(bs64)
-        cv2.imwrite("dump/{}.png".format(i),img)
+        cv2.imwrite("dump/{}.png".format(i), img)
     time.sleep(fps)
