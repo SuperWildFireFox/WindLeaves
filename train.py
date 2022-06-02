@@ -36,11 +36,12 @@ def get_args():
     parser.add_argument("--weight_path", type=str, default="model", help="权重保存路径")
     parser.add_argument("--summary_path", type=str, default="summary", help="log文件保存路径")
     parser.add_argument("--num_env", type=int, default=4, help="同时训练的环境数")
-    parser.add_argument("--monitor", type=int, default=2, help="可视化环境显示的显示屏位置")
+    parser.add_argument("--monitor", type=int, default=1, help="可视化环境显示的显示屏位置")
     parser.add_argument('--lr', type=float, default=1e-5)
-    parser.add_argument('--test_step', type=int, default=10, help="训练中测试的间隔")
+    parser.add_argument('--eps', type=float, default=1e-5)
+    parser.add_argument('--test_step', type=int, default=50, help="训练中测试的间隔")
     parser.add_argument('--max_train_episode', type=int, default=9600, help="最大训练轮次")
-    parser.add_argument('--num_collection_steps', type=int, default=32, help="每episode收集数据步数")
+    parser.add_argument('--num_collection_steps', type=int, default=64, help="每episode收集数据步数")
     parser.add_argument('--gamma', type=float, default=0.975, help="奖励折扣因子")
     parser.add_argument('--gae_lambda', type=float, default=0.98, help="gae参数")
     parser.add_argument('--train_epoch', type=int, default=4, help="每episode数据的训练轮数")
@@ -48,6 +49,8 @@ def get_args():
     parser.add_argument('--epsilon', type=float, default=0.2)
     parser.add_argument('--beta', type=float, default=0.01, help='计算actor loss时熵的系数')
     parser.add_argument('--mode_save_episode', type=int, default=100, help="训练模型保存间隔")
+    parser.add_argument('--log_path_training', type=str, default="training.log")
+    parser.add_argument('--log_path_testing', type=str, default="testing.log")
     args = parser.parse_args()
     return args
 
@@ -85,9 +88,9 @@ def train(args):
                              "feature1_length": feature1_length, "feature2_length": feature2_length}
         fp.write(json.dumps(model_input_shape))
     actor = Actor(NUM_ACTION, IMAGE_PROCESS_SIZE, feature1_length, feature2_length).to(device)
-    actor_optimizer = torch.optim.Adam(actor.parameters(), lr=args.lr)
+    actor_optimizer = torch.optim.Adam(actor.parameters(), lr=args.lr, eps=args.eps)
     critic = Critic(IMAGE_PROCESS_SIZE, feature1_length, feature2_length).to(device)
-    critic_optimizer = torch.optim.Adam(critic.parameters(), lr=args.lr)
+    critic_optimizer = torch.optim.Adam(critic.parameters(), lr=args.lr, eps=args.eps)
     if WEIGHT_PATH_ACTOR and WEIGHT_PATH_CRITIC and os.path.exists(WEIGHT_PATH_ACTOR) and os.path.exists(
             WEIGHT_PATH_CRITIC):
         print("load weight from {},{}".format(WEIGHT_PATH_ACTOR, WEIGHT_PATH_CRITIC))
@@ -137,9 +140,10 @@ def train(args):
             features1.append(curr_feature1)
             features2.append(curr_feature2)
             masks.append(curr_mask)
-            logic = actor(curr_image, curr_feature1, curr_feature2, curr_mask)
-            # num_envs*1
-            value = critic(curr_image, curr_feature1, curr_feature2)
+            with torch.no_grad():
+                logic = actor(curr_image, curr_feature1, curr_feature2, curr_mask)
+                # num_envs*1
+                value = critic(curr_image, curr_feature1, curr_feature2)
 
             values.append(value.squeeze())
             policy = F.softmax(logic, dim=1)

@@ -16,7 +16,7 @@ def convert_bs64_to_array(bs64):
 
 
 # 图片归一化
-def NormalizeImage(image, resize_size, show_image=False, save_image=True):
+def NormalizeImage(image, resize_size, show_image=False, save_image=False):
     """
     图片归一化
     :param image: hwc
