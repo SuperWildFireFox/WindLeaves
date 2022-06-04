@@ -4,7 +4,6 @@ import os
 import random
 import shutil
 import time
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -14,8 +13,9 @@ from torch.distributions import Categorical
 
 from model import Actor, Critic
 from test import GameTest
-from util.data import generate_feature1, generate_feature2, compute_gae
+from util.data import generate_feature1, generate_feature2, compute_gae, RewardScaling, lr_decay
 from util.image import NormalizeImage
+from util.log import Logger
 from wenv.control import EnvironmentControl
 from wenv.wind import ACTIONS, GameState, GAME_ORIGIN_SIZE, DOWNSAMPLE_SCALE, PLAYER_VIEW_SHAPE, Game
 
@@ -35,14 +35,15 @@ def get_args():
     parser.add_argument("--seed", type=int, default=42, help='随机数种子（虽然没什么用，程序无法控制javascript内部随机数）')
     parser.add_argument("--weight_path", type=str, default="model", help="权重保存路径")
     parser.add_argument("--summary_path", type=str, default="summary", help="log文件保存路径")
-    parser.add_argument("--num_env", type=int, default=4, help="同时训练的环境数")
+    parser.add_argument("--num_env", type=int, default=6, help="同时训练的环境数")
     parser.add_argument("--monitor", type=int, default=1, help="可视化环境显示的显示屏位置")
     parser.add_argument('--lr', type=float, default=1e-5)
     parser.add_argument('--eps', type=float, default=1e-5)
-    parser.add_argument('--test_step', type=int, default=50, help="训练中测试的间隔")
-    parser.add_argument('--max_train_episode', type=int, default=9600, help="最大训练轮次")
-    parser.add_argument('--num_collection_steps', type=int, default=64, help="每episode收集数据步数")
-    parser.add_argument('--gamma', type=float, default=0.975, help="奖励折扣因子")
+    parser.add_argument('--test_step', type=int, default=20, help="训练中测试的间隔")
+    parser.add_argument('--test_round', type=int, default=6, help="每次测试的次数")
+    parser.add_argument('--max_train_episode', type=int, default=15000, help="最大训练轮次")
+    parser.add_argument('--num_collection_steps', type=int, default=32, help="每episode收集数据步数")
+    parser.add_argument('--gamma', type=float, default=0.96, help="奖励折扣因子")
     parser.add_argument('--gae_lambda', type=float, default=0.98, help="gae参数")
     parser.add_argument('--train_epoch', type=int, default=4, help="每episode数据的训练轮数")
     parser.add_argument('--batch_split', type=int, default=2, help="每epoch训练时切分数")
@@ -77,7 +78,9 @@ def train(args):
     os.makedirs(DUMP_PATH)
 
     writer = SummaryWriter(args.summary_path)
+    logger = Logger(args.log_path_training)
     envs = EnvironmentControl(args.num_env, monitor=args.monitor)
+    reward_scaling = [RewardScaling(1, args.gamma) for _ in range(args.num_env)]
 
     # 生成模型与优化器
     feature1_length = 2 + 2 + len(GameState.CurrentStates) + len(GameState.PositionStates) + len(
@@ -158,6 +161,11 @@ def train(args):
                 [agent_conn.send(atc) for agent_conn, atc in zip(envs.agent_conns, action)]
             image, game_state, reward = zip(*[agent_conn.recv() for agent_conn in envs.agent_conns])
             terminal = [gs.game_state == "EndPage" for gs in game_state]
+            reward = [reward_scaling[idx](reward[idx])[0] for idx in range(args.num_env)]
+            for idx in range(args.num_env):
+                if terminal[idx]:
+                    reward_scaling[idx].reset()
+
             image = np.concatenate([NormalizeImage(im, IMAGE_PROCESS_SIZE) for im in image], 0)
             # n*c*w*h
             image = torch.from_numpy(image).to(device)
@@ -204,6 +212,7 @@ def train(args):
         a_loss_list = []
         c_loss_list = []
         entropy_list = []
+        lr_decay(args, curr_episode, actor_optimizer, critic_optimizer)
         for epoch in range(args.train_epoch):
             indices = torch.randperm(args.num_env * args.num_collection_steps)
             for bs in range(args.batch_split):
@@ -240,8 +249,8 @@ def train(args):
         writer.add_scalar("TRAIN_actor_loss", a_loss, curr_episode)
         writer.add_scalar("TRAIN_critic_loss", c_loss, curr_episode)
         writer.add_scalar("TRAIN_entropy_loss", e_loss, curr_episode)
-        print(time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)),
-              "Episode: {}. Actor loss: {:.4f}. Critic loss: {:.4f}".format(curr_episode, a_loss, c_loss))
+        logger.write("{} Episode: {}. Actor loss: {:.4f}. Critic loss: {:.4f}".format(
+            time.strftime("%H:%M:%S", time.gmtime(time.time() - start_time)), curr_episode, a_loss, c_loss))
         if curr_episode % args.mode_save_episode == 0:
             torch.save(actor.state_dict(), "{}/actor_episode_{}.pth".format(args.weight_path, curr_episode))
             torch.save(critic.state_dict(), "{}/critic_episode_{}.pth".format(args.weight_path, curr_episode))

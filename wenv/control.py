@@ -24,6 +24,8 @@ class LayoutManager:
             self.layout = (2, 1)
         elif nums == 4:
             self.layout = (4, 1)
+        elif nums == 6:
+            self.layout = (3, 2)
         elif nums == 8:
             self.layout = (4, 2)
         elif nums == 16:

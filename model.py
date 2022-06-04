@@ -9,7 +9,9 @@ def cal_conv_shape(shape, n):
     return shape[0] * shape[1]
 
 
-FC_LENGTH = 128
+FC_1_LENGTH = 128
+FC_2_LENGTH = 256
+FC_C_LENGTH = 512
 
 
 class BasePPO(nn.Module):
@@ -27,20 +29,20 @@ class BasePPO(nn.Module):
         )
 
         self.FC_features1 = nn.Sequential(
-            nn.Linear(feature1_length, FC_LENGTH),
+            nn.Linear(feature1_length, FC_1_LENGTH),
             nn.Tanh(),
-            nn.Linear(FC_LENGTH, FC_LENGTH),
+            nn.Linear(FC_1_LENGTH, FC_1_LENGTH),
             nn.Tanh(),
         )
 
         self.FC_features2 = nn.Sequential(
-            nn.Linear(feature2_length, FC_LENGTH),
+            nn.Linear(feature2_length, FC_2_LENGTH),
             nn.Tanh(),
-            nn.Linear(FC_LENGTH, FC_LENGTH),
+            nn.Linear(FC_2_LENGTH, FC_2_LENGTH),
             nn.Tanh(),
         )
 
-        self.FC = nn.Linear(64 * cal_conv_shape(image_shape, 2) + FC_LENGTH + FC_LENGTH, 256)
+        self.FC = nn.Linear(64 * cal_conv_shape(image_shape, 2) + FC_1_LENGTH + FC_2_LENGTH, FC_C_LENGTH)
 
     def _initialize_weights(self):
         for module in self.modules():
@@ -60,7 +62,7 @@ class BasePPO(nn.Module):
 class Actor(BasePPO):
     def __init__(self, num_actions, image_shape, feature1_length, feature2_length):
         super(Actor, self).__init__(image_shape, feature1_length, feature2_length)
-        self.actor_linear = nn.Linear(256, num_actions)
+        self.actor_linear = nn.Linear(FC_C_LENGTH, num_actions)
         self._initialize_weights()
 
     def forward(self, image, feature1, feature2, mask):
@@ -73,7 +75,7 @@ class Actor(BasePPO):
 class Critic(BasePPO):
     def __init__(self, image_shape, feature1_length, feature2_length):
         super(Critic, self).__init__(image_shape, feature1_length, feature2_length)
-        self.critic_linear = nn.Linear(256, 1)
+        self.critic_linear = nn.Linear(FC_C_LENGTH, 1)
         self._initialize_weights()
 
     def forward(self, image, feature1, feature2):

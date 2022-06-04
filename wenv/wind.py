@@ -37,7 +37,9 @@ OFFLINE_CHROME_HEIGHT = 120 + 100  # 100 is fix
 PLAYER_VIEW_SHAPE = (3 * 360, 360)
 PLAYER_VIEW_SPLIT = (1, 3)
 # 缩小采样比例
-DOWNSAMPLE_SCALE = 5
+DOWNSAMPLE_SCALE = 4
+# 最小抓取时间间隔
+CATCH_TIME_STEP = 0.4
 
 
 class GameState:
@@ -154,16 +156,13 @@ class GameState:
             if leaf_obj.is_visible(view_range):
                 leaf_obj.cal_distance(self.posx, self.posy)
                 self.leaves_obj.append(leaf_obj)
-        self.mask_catch = False
+        self.disable_catch = False
 
     # 根据视窗大小与左右视窗比例计算画面裁剪范围
     def get_view_range(self):
         left_length = PLAYER_VIEW_SHAPE[0] * PLAYER_VIEW_SPLIT[0] / (PLAYER_VIEW_SPLIT[0] + PLAYER_VIEW_SPLIT[1])
         right_length = PLAYER_VIEW_SHAPE[0] - left_length
         return [self.posx - left_length, self.posx + right_length]
-
-    def add_catch_mask(self):
-        self.mask_catch = True
 
     # 屏蔽无效动作
     def get_action_mask(self):
@@ -179,9 +178,6 @@ class GameState:
         if self.stem_id and self.stem_type == "stem_lucky" or self.ground_id and self.ground_type == "leaf_lucky":
             base_mask[1] = base_mask[2] = base_mask[3] = base_mask[4] = base_mask[5] = base_mask[6] = base_mask[7] = \
                 base_mask[8] = 0
-
-        if self.mask_catch:
-            base_mask[3] = base_mask[6] = base_mask[8] = 0
         return base_mask
 
     @property
@@ -250,7 +246,6 @@ class Game:
         self.pre_score = 0
 
         # 人工规则干预
-        # 记录抓取叶柄
         self.pre_catch_time = 0
 
     # 初始化离线环境
@@ -299,7 +294,9 @@ class Game:
     def get_reward(self, game_state):
         if game_state.game_state == 'EndPage':
             reward = -15
-        elif game_state.position_state != "Mid":
+        elif game_state.position_state == "LeftTorch":
+            reward = -2
+        elif game_state.position_state == "RightTorch":
             reward = -1
         else:
             if game_state.score > self.pre_score:
@@ -315,6 +312,16 @@ class Game:
         if self.pre_step_terminal:
             self.reset_offline_env()
         self.control_resume_game()
+        # 手动加一个抓取间隔，防止鬼畜
+        if action in [3, 6, 8]:
+            if time.time() - self.pre_catch_time < CATCH_TIME_STEP:
+                if action == 3:
+                    action = 1
+                elif action == 6:
+                    action = 4
+                elif action == 8:
+                    action = 0
+            self.pre_catch_time = time.time()
         action_chars = []
         for act in ACTIONS[action]:
             action_chars.append(ACTION_KET_MAP[act])
@@ -329,12 +336,6 @@ class Game:
         if action_chars[0] is not None:
             self.tool_execute_script(js2)
         self.game_state = self.info_get_game_state()
-        # 抓取屏蔽，减少抽搐
-        if action in [3, 6, 8]:
-            if time.time() - self.pre_catch_time < 0.4:
-                self.game_state.add_catch_mask()
-            self.pre_catch_time = time.time()
-
         self.image_data = self.info_get_game_image(self.game_state)
         reward = self.get_reward(self.game_state)
         if self.game_state.game_state == "EndPage":
