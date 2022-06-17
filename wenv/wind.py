@@ -1,12 +1,13 @@
 import os
 import random
 import time
+import traceback
 
 import cv2
 import numpy as np
 from selenium import webdriver
 
-from util.net import get_chromedriver
+from util.net import get_chromedriver, enter_online_game
 from util.image import convert_bs64_to_array, NormalizeImage
 from wenv.hack_code import get_keydown_js, get_keyup_js
 
@@ -39,7 +40,7 @@ PLAYER_VIEW_SPLIT = (1, 3)
 # 缩小采样比例
 DOWNSAMPLE_SCALE = 4
 # 最小抓取时间间隔
-CATCH_TIME_STEP = 0.4
+CATCH_TIME_STEP = 0
 
 
 class GameState:
@@ -238,6 +239,9 @@ class Game:
         # fps仅供参考，实际fps会比设定值小，大约小一倍
         self.fps_r = 1 / 24
 
+        # 在线参数
+        self.port = None
+
         # 全局对象
         self.driver = None
         self.game_state = None
@@ -267,6 +271,44 @@ class Game:
         #     else:
         #         time.sleep(self.fps_r)
 
+    def init_online_env(self, port=9090):
+        self.port = port
+        self.init_online_driver()
+        try:
+            enter_online_game(self.driver)
+            while not self.driver.current_url.startswith("https://www.bilibili.com"):
+                enter_online_game(self.driver)
+                time.sleep(3)
+        except:
+            # traceback.print_exc()
+            self.driver.quit()
+            self.init_online_env(port)
+
+    # 等待直到在线可输入动作
+    def wait_online_ready(self):
+        can_input = False
+        while not can_input:
+            try:
+                js = "return hack_online_ready"
+                can_input = self.tool_execute_script(js)
+                time.sleep(0.5)
+            except:
+                pass
+
+    # 获取在线版浏览器位置
+    def get_online_monitor(self):
+        p = self.driver.get_window_position()
+        px, py = p['x'], p['y']
+        w = self.driver.get_window_size()
+        wx, wy = w['width'], w['height']
+        # print(px,py)
+        # print(wx,wy)
+        return {"left": px,
+                "top": py,
+                "width": wx,
+                "height": wy
+                }
+
     # 重置离线版游戏环境
     def reset_offline_env(self):
         self.pre_step_terminal = False
@@ -291,6 +333,14 @@ class Game:
         self.driver.set_window_size(width=OFFLINE_CHROME_WIDTH, height=OFFLINE_CHROME_HEIGHT)
         self.driver.set_window_position(*self.layout_pos)
 
+    # 初始化在线driver
+    def init_online_driver(self):
+        chop = webdriver.ChromeOptions()
+        chop.add_argument('--proxy-server=http://127.0.0.1:%d' % self.port)
+        self.driver = webdriver.Chrome(options=chop)
+        # self.driver.set_window_position(-1920,363)
+        # self.driver.set_window_size(1396,970)
+
     def get_reward(self, game_state):
         if game_state.game_state == 'EndPage':
             reward = -15
@@ -310,7 +360,10 @@ class Game:
     # action为单一数值，0开始
     def step(self, action):
         if self.pre_step_terminal:
-            self.reset_offline_env()
+            if self.mode == Game.OFFLINE:
+                self.reset_offline_env()
+            else:
+                self.pre_step_terminal = False
         self.control_resume_game()
         # 手动加一个抓取间隔，防止鬼畜
         if action in [3, 6, 8]:
@@ -347,9 +400,25 @@ class Game:
     def random_move(self):
         assert self.action == Game.ACTION_RANDOM
         actions_num = [i for i in range(len(ACTIONS))]
+        import os  # 导入os模块
+        import sys  # 导入sys模块
         while True:
             action = random.choice(actions_num)
-            self.step(action)
+            image_data, game_state, reward = self.step(action)
+            image_data = NormalizeImage(image_data,(PLAYER_VIEW_SHAPE[0],PLAYER_VIEW_SHAPE[1]),show_image=True)
+            # f_handler = open('out.log', 'w')  # 打开out.log文件
+            # oldstdout = sys.stdout  # 保存默认的Python标准输出
+            # sys.stdout = f_handler  # 将Python标准输出指向out.log
+            os.system('cls')  # 清空Python控制台
+            print("Current Action is {}".format(ACTIONS[action]))
+            print("Current State:{}".format(game_state.current_state))
+            print("Player Position: [{}, {}]".format(game_state.posx,game_state.posy))
+            print("Player speed: [{}, {}]".format(game_state.velocity_x,game_state.velocity_y))
+            print("score: {}".format(game_state.score))
+            print("environment speed: {}".format(game_state.base_speed))
+            time.sleep(0.01)
+            # sys.stdout = oldstdout  # 恢复Python默认的标准输出
+
 
     # 工具函数，对driver执行js（因为可能会涉及到锁所以单独拎出来）
     def tool_execute_script(self, js, obj=None):

@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 
-model/
+data_backup_and_handle/model/
 dump/
 summary/
 offline_game/
@@ -139,3 +139,5 @@ offline_game/
 tfox_*
 
 data_backup_and_handle/
+*.zip
+model/

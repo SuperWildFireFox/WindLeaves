@@ -1,11 +1,8 @@
-TARGET_FILE = "odXH9yzdsj.js"
-origin_js = 'await s.am.load();'
-hack_js = 'await s.am.load();window.gameInst=this;'
-
 hack_js_file_path = "wenv/odXH9yzdsj.js"
 
 REPLACE_MAP = {
-    "/wind-game/": "https://"
+    "/wind-game/": "https://",
+    "hack_start_wait_time = 0e3": "hack_start_wait_time = 3e3"
 }
 
 

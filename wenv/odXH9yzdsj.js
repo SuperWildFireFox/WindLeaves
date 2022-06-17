@@ -7,6 +7,8 @@ hack_canvas_base64 = "";
 hack_canvas_require_flag = false;
 hack_scoreboard = [];
 hack_game_area = [];
+hack_start_wait_time = 0e3;
+hack_online_ready = false;
 (() => {
     var e, t, i, n, o, r, s = {
         9669: (e, t, i) => {
@@ -3410,7 +3412,7 @@ hack_game_area = [];
                 }
 
                 render(e) {
-                    if (k.time < 0e3) return;
+                    if (k.time < hack_start_wait_time) return;
                     this.increaseFloat += this.options.particleBirthRate / 60;
                     const t = Math.floor(this.increaseFloat) - this.increaseTemp;
                     t > 0 && (this.increaseFloat -= t, this.increaseTemp = 0), this.bornParticles = Math.min(this.options.numParticles, this.bornParticles + t), this.bornParticles > 0 && (this.updatePass?.(), this.displayPass?.(e))
@@ -3584,7 +3586,7 @@ hack_game_area = [];
                                     t.leafDisableLock || (e.body.velocity.y < .5 && e.body.position.y - e.size.h / 2 > i.position.y + 8 ? i.collisionFilter.mask = 5 | i.collisionFilter.mask : i.collisionFilter.mask = ~(5 | ~i.collisionFilter.mask))
                                 })), o.Composite.translate(s.YB.engine.world, {x: -.18 * r.HT.deltaT, y: 0})
                             })), this.keyboardInput.onKeyDown((i => {
-                                if (r.HT.time < 0e3) return;
+                                if (r.HT.time < hack_start_wait_time) return;
                                 const n = () => {
                                     ({
                                         Ground: () => {
@@ -3755,7 +3757,8 @@ hack_game_area = [];
                             }
                             this.renderer.gl2.clearColor(1, 1, 1, 1),
                                 this.renderer.gl2.clear(this.renderer.gl2.COLOR_BUFFER_BIT | this.renderer.gl2.DEPTH_BUFFER_BIT);
-                            r.HT.time > 0e3 && (this.gameState.update(), this.scene.updateRecursive()), this.renderer.render(this.camera, this.scene);
+                            r.HT.time > hack_start_wait_time && (this.gameState.update(), this.scene.updateRecursive()), this.renderer.render(this.camera, this.scene);
+                            r.HT.time > hack_start_wait_time && (hack_online_ready = true);
                         }
 
                         af(e) {
@@ -4157,7 +4160,7 @@ hack_game_area = [];
                 }
 
                 update() {
-                    this.object && n.HT.time > 0e3 ? this.object = void 0 : this.object && this.translate([n.HT.deltaT * (o.XH.translateSpeed - .18) / 2, 0, 0])
+                    this.object && n.HT.time > hack_start_wait_time+1e3 ? this.object = void 0 : this.object && this.translate([n.HT.deltaT * (o.XH.translateSpeed - .18) / 2, 0, 0])
                 }
             }
         }, 7199: (e, t, i) => {
@@ -4742,7 +4745,7 @@ hack_game_area = [];
                     for (; this.trapNode.children[0]?.position[0] < -1e3;) this.trapNode.children.shift()?.destroy();
                     for (; this.luckyNode.children[0]?.position[0] < -1e3;) this.luckyNode.children.shift()?.destroy();
                     this.hack_all_array = [];
-                    this.lastNodePosition[0] < 1100 && this.addNext(), this.normalNode.children.concat(this.trapNode.children).forEach(((e, t) => {
+                    this.lastNodePosition[0] < 1100 && this.addNext(), this.all().forEach(((e, t) => {
                         const y_sp = .5 * Math.sin(n.HT.time / 400 + 1.23 * t);
                         s.Body.translate(e.leafBody, {x: 0, y: y_sp});
                         const t_array = [e.leafBody.label, e._position[0],e._position[1], y_sp];

@@ -65,7 +65,8 @@ class EnvironmentControl:
             self.layout_manager = LayoutManager(self.num_envs,
                                                 OFFLINE_CHROME_WIDTH,
                                                 OFFLINE_CHROME_HEIGHT,
-                                                monitor=monitor)
+                                                monitor=monitor,
+                                                display_mode="mid")
         self.agent_conns, self.env_conns = zip(*[mp.Pipe() for _ in range(num_envs)])
         for idx in range(num_envs):
             if use_layout:

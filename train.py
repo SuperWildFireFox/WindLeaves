@@ -41,7 +41,7 @@ def get_args():
     parser.add_argument('--eps', type=float, default=1e-5)
     parser.add_argument('--test_step', type=int, default=20, help="训练中测试的间隔")
     parser.add_argument('--test_round', type=int, default=6, help="每次测试的次数")
-    parser.add_argument('--max_train_episode', type=int, default=15000, help="最大训练轮次")
+    parser.add_argument('--max_train_episode', type=int, default=30000, help="最大训练轮次")
     parser.add_argument('--num_collection_steps', type=int, default=32, help="每episode收集数据步数")
     parser.add_argument('--gamma', type=float, default=0.96, help="奖励折扣因子")
     parser.add_argument('--gae_lambda', type=float, default=0.98, help="gae参数")
@@ -175,7 +175,7 @@ def train(args):
             terminal = torch.FloatTensor(terminal).to(device)
             # num_envs*fea1
             feature1 = generate_feature1(game_state, feature1_length).to(device)
-            # num_envs*10*fea2
+            # num_envs*16*fea2
             feature2 = generate_feature2(game_state, feature2_length).to(device)
             # num_env*len(action)
             mask = torch.cat(

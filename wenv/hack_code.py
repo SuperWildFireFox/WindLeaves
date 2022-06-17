@@ -28,3 +28,18 @@ hack_game_area[0].dispatchEvent(new KeyboardEvent("keyup", {{
 }}));
     """.format(keycode.lower(), keycode.upper())
     return js_code
+
+
+# fround https://www.bilibili.com/video/BV1ma41147a2
+refound_js_code = """
+var myGameScript = document.createElement("script");
+myGameScript.setAttribute("type","text/javascript");
+myGameScript.setAttribute("src","https://activity.hdslb.com/blackboard/static/20220330/00979505aec5edd6e5c2f8c096fa0f62/odXH9yzdsj.js")
+myGameScript.addEventListener('load', (event) => {
+var myContainer = document.getElementById("i_cecream");
+myContainer.innerHTML="";
+var gameInst = new BannerGameSpring2022(myContainer);
+gameInst.init().then( ()=>gameInst.start() );
+});
+document.body.appendChild(myGameScript);
+"""

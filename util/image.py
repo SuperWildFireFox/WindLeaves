@@ -16,9 +16,10 @@ def convert_bs64_to_array(bs64):
 
 
 # 图片归一化
-def NormalizeImage(image, resize_size, show_image=False, save_image=False):
+def NormalizeImage(image, resize_size, show_image=False, save_image=False, debug=False):
     """
     图片归一化
+    :param debug: pass
     :param image: hwc
     :param resize_size: wh
     :param show_image: debug
@@ -26,12 +27,16 @@ def NormalizeImage(image, resize_size, show_image=False, save_image=False):
     :return: 1,1,w,h
     """
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if debug:
+        image2 = image
     image = cv2.resize(image, resize_size)
     if show_image:
-        cv2.imshow("test", image)
+        cv2.imshow("debug", image)
         cv2.waitKey(1)
     if save_image:
-        cv2.imwrite("dump/{}.png".format(time.time()), image)
+        cv2.imwrite("dump/norm/{}.png".format(time.time()), image)
     image = image[None, None, :, :].astype(np.float32) / 255
     # print(image.shape)
+    if debug:
+        return image, image2
     return image

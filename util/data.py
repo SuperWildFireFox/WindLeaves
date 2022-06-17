@@ -125,3 +125,4 @@ def lr_decay(args, episode, actor_optimizer, critic_optimizer):
         p['lr'] = lr_now
     for p in critic_optimizer.param_groups:
         p['lr'] = lr_now
+
