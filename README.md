@@ -1,5 +1,7 @@
 # 用PPO算法玩B站风叶穿行游戏
 
+![show](image/show.png)
+
 ## 程序说明
 
 本程序基于windows系统，python3.7.9，pytorch1.7.1
